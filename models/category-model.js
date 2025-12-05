@@ -6,31 +6,38 @@ class Article {
   /**
    * Fetch articles by category with pagination
    */
-static async getByCategory(website_id, category, limit = 5, startAfterDoc = null) {
-  let query = db.collection(COLLECTION_NAME)
-    .where("status", "==", "published")
-    .where("website_id", "==", website_id)
-    .where("category", "==", category)
-    .orderBy("createdAt", "desc")
-    .limit(limit + 1); // fetch one extra
+  static async getByCategory(website_id, category, limit = 6, startAfterDoc = null) {
+    let query = db.collection(COLLECTION_NAME)
+      .where("status", "==", "published")
+      .where("website_id", "==", website_id)
+      .where("category", "==", category)
+      .orderBy("createdAt", "desc")   // ← PURE NEWEST FIRST
+      .limit(limit + 1);              // fetch +1 for filtering
 
-  if (startAfterDoc) {
-    query = query.startAfter(startAfterDoc);
+    if (startAfterDoc) {
+      query = query.startAfter(startAfterDoc);
+    }
+
+    const snapshot = await query.get();
+
+    // Convert docs
+    const raw = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Remove "index" SLUG (done here, NOT in Firestore)
+    const filtered = raw.filter(item => item.slug !== "index");
+
+    // Limit to exact page size
+    const items = filtered.slice(0, limit);
+
+    // Pagination cursor
+    const nextPageToken =
+      snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+    return { items, nextPageToken };
   }
-
-  const snapshot = await query.get();
-
-  // Filter out 'index' items
-  const filteredDocs = snapshot.docs.filter(doc => doc.data().slug !== "index");
-
-  // Map to response items
-  const items = filteredDocs.slice(0, limit).map(doc => ({ id: doc.id, ...doc.data() }));
-
-  // Determine nextPageToken from the extra doc
-  const nextPageToken = filteredDocs.length > limit ? filteredDocs[limit] : null;
-
-  return { items, nextPageToken };
-}
 
 
   /**

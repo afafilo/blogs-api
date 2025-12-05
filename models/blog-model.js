@@ -27,6 +27,8 @@ class Blog {
       "dating",
       "psychology",
       "travel",
+      "realities",
+      "our-process",
     ];
 
     const snapshot = await db.collection(COLLECTION_NAME)

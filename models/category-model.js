@@ -7,40 +7,31 @@ class Article {
    * Fetch articles by category with pagination
    */
 static async getByCategory(website_id, category, limit = 6, page = 0) {
-  let query = db.collection(COLLECTION_NAME)
+  // 1. Fetch all IDs that match the filter
+  const snapshot = await db.collection(COLLECTION_NAME)
     .where("status", "==", "published")
     .where("website_id", "==", website_id)
     .where("category", "==", category)
     .orderBy("createdAt", "desc")
-    .offset(page * limit)
-    .limit(limit + 1);
+    .get();
 
-  const snapshot = await query.get();
+  // 2. Filter out unwanted slugs
+  const filtered = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(item => item.slug !== "index");
 
-  const raw = snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+  // 3. Slice the correct page
+  const start = page * limit;
+  const items = filtered.slice(start, start + limit);
 
-  const filtered = raw.filter(item => item.slug !== "index");
-
-  const items = filtered.slice(0, limit);
-
-  const nextPageToken =
-    snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
-
-  return { items, nextPageToken };
+  return {
+    items,
+    page,
+    totalItems: filtered.length,
+    totalPages: Math.ceil(filtered.length / limit),
+  };
 }
 
-
-
-  /**
-   * Convert ID → snapshot (required for startAfter queries)
-   */
-  static async getDocSnapshotById(id) {
-    const docRef = db.collection(COLLECTION_NAME).doc(id);
-    return await docRef.get();
-  }
 
 
   /**

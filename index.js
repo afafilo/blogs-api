@@ -6,6 +6,7 @@ const cors = require('cors');
 
 const blogRoutes = require('./routes/blogRoutes.js');
 const categoryRoutes= require('./routes/categoryRoute.js')
+const videoRoute = require('./routes/videoRoute.js')
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json()); // in case you handle JSON requests
 
 app.use('/api/blogs', blogRoutes);
 app.use('/api/category',categoryRoutes );
+app.use('/api/videos',videoRoute );
 
 app.listen(5000, console.log('running on local'));
 

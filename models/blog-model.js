@@ -2,19 +2,37 @@ const { db } = require('../firebase.js');
 const COLLECTION_NAME = 'pages';
 
 class Blog {
+  static REQUIRED_CATEGORIES = [
+    "culture",
+    "dating",
+    "psychology",
+    "travel",
+    "realities",
+    "our-process",
+  ];
+
   // For featured
   static async getLatestBlog(website_id) {
     const snapshot = await db.collection(COLLECTION_NAME)
       .where('status', '==', 'published')
       .where('website_id', '==', website_id)
       .orderBy('createdAt', 'desc')
-      .limit(10) // fetch a few extra in case "index" exists
+      .limit(20) // fetch more to ensure filtering still leaves results
       .get();
 
     if (snapshot.empty) return null;
 
-    // Exclude slug === 'index'
-    const doc = snapshot.docs.find(doc => doc.data().slug !== 'index');
+    // Find first valid doc:
+    // - slug !== "index"
+    // - category within REQUIRED_CATEGORIES
+    const doc = snapshot.docs.find(doc => {
+      const data = doc.data();
+      return (
+        data.slug !== "index" &&
+        Blog.REQUIRED_CATEGORIES.includes(data.category)
+      );
+    });
+
     if (!doc) return null;
 
     return { id: doc.id, ...doc.data() };
@@ -22,15 +40,6 @@ class Blog {
 
   // Get latest N blogs per category filtered by website_id
   static async getLatestPerCategory(website_id, limit = 6, skipId = null) {
-    const REQUIRED_CATEGORIES = [
-      "culture",
-      "dating",
-      "psychology",
-      "travel",
-      "realities",
-      "our-process",
-    ];
-
     const snapshot = await db.collection(COLLECTION_NAME)
       .where("status", "==", "published")
       .where('website_id', '==', website_id)
@@ -38,7 +47,7 @@ class Blog {
       .get();
 
     const result = {};
-    REQUIRED_CATEGORIES.forEach(cat => result[cat] = []);
+    Blog.REQUIRED_CATEGORIES.forEach(cat => result[cat] = []);
 
     snapshot.docs.forEach(doc => {
       if (doc.id === skipId) return;
@@ -49,7 +58,7 @@ class Blog {
       if (data.slug === 'index') return;
 
       const cat = data.category;
-      if (REQUIRED_CATEGORIES.includes(cat) && result[cat].length < limit) {
+      if (Blog.REQUIRED_CATEGORIES.includes(cat) && result[cat].length < limit) {
         result[cat].push({ id: doc.id, ...data });
       }
     });

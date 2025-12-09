@@ -17,7 +17,6 @@ class Blog {
       .where('status', '==', 'published')
       .where('website_id', '==', website_id)
       .orderBy('createdAt', 'desc')
-      .limit(20) // fetch more to ensure filtering still leaves results
       .get();
 
     if (snapshot.empty) return null;

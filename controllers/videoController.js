@@ -18,8 +18,8 @@ exports.getVideosByCategory = async (req, res) => {
       latestId = latestVideo ? latestVideo.id : null;
     }
 
-    // Fetch limit + 1 items on first page to ensure we still get `limit` after filtering
-    const fetchLimit = pageNum === 0 ? parsedLimit + 1 : parsedLimit;
+    // Fetch limit + 2 items on first page to ensure we still get `limit` after filtering
+    const fetchLimit = parsedLimit + (pageNum === 0 ? 2 : 1);
 
     const { items: rawItems } = await Video.getByCategory(
       website_id,
@@ -28,14 +28,19 @@ exports.getVideosByCategory = async (req, res) => {
       pageNum
     );
 
-    // Filter latest only on first page
     let filteredItems = rawItems;
+
+    // Remove latest only for first page
     if (pageNum === 0 && latestId) {
-      filteredItems = rawItems.filter(item => item.id !== latestId);
+      filteredItems = filteredItems.filter(item => item.id !== latestId);
     }
 
     // Slice to exact limit
-    filteredItems = filteredItems.slice(0, parsedLimit);
+    if (pageNum === 0) {
+      filteredItems = filteredItems.slice(0, parsedLimit);
+    } else {
+      filteredItems = rawItems.slice(0, parsedLimit);
+    }
 
     const totalItems = await Video.getTotalCount(website_id, category);
     const adjustedTotal = pageNum === 0 && latestId ? totalItems - 1 : totalItems;
@@ -49,10 +54,11 @@ exports.getVideosByCategory = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error fetching Categorys:", err);
+    console.error("Error fetching Categories:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 
 

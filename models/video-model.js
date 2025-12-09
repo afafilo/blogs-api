@@ -15,7 +15,7 @@ static async getByCategory(website_id, category, limit = 6, page = 0) {
     .where("category", "==", category)
     .orderBy("createdAt", "desc")
     .offset(offsetCount)
-    .limit(limit);
+    .limit(limit + 2); // fetch extra items to account for filtering
 
   const snapshot = await query.get();
 
@@ -24,6 +24,7 @@ static async getByCategory(website_id, category, limit = 6, page = 0) {
     ...doc.data()
   }));
 
+  // Exclude items with slug "index"
   const filtered = raw.filter(item => item.slug !== "index");
 
   return { items: filtered };
@@ -31,22 +32,26 @@ static async getByCategory(website_id, category, limit = 6, page = 0) {
 
 
  static async getLatest(website_id, category) {
-    const snapshot = await db.collection(COLLECTION_NAME)
-      .where("status", "==", "published")
-      .where("website_id", "==", website_id)
-      .where("category", "==", category)
-      .orderBy("createdAt", "desc")
-      .limit(1)
-      .get();
+  const snapshot = await db.collection(COLLECTION_NAME)
+    .where("status", "==", "published")
+    .where("website_id", "==", website_id)
+    .where("category", "==", category)
+    .orderBy("createdAt", "desc")
+    .limit(5) // fetch extra in case "index" is first
+    .get();
 
-    if (snapshot.empty) return null;
+  if (snapshot.empty) return null;
 
-    const doc = snapshot.docs[0];
-    return {
-      id: doc.id,
-      ...doc.data()
-    };
-  }
+  // Skip slug === "index"
+  const doc = snapshot.docs.find(d => d.data().slug !== "index");
+
+  if (!doc) return null;
+
+  return {
+    id: doc.id,
+    ...doc.data(),
+  };
+}
 
   /**
    * Get total count (must match same filtering)
